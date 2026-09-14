@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Padel Score</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Padel Score">
+<meta name="theme-color" content="#0a1514">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a1514;
+    --court: #123c3a;
+    --court-2: #1a504c;
+    --court-line: #eef0e2;
+    --ball: #d7e552;
+    --team-a: #4a9bb0;
+    --team-a-dim: #2e6270;
+    --team-b: #cf6b44;
+    --team-b-dim: #7d4230;
+    --ink: #eef0e2;
+    --ink-dim: rgba(238,240,226,0.56);
+    --ink-faint: rgba(238,240,226,0.32);
+    --danger: #c1503f;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:'Manrope', sans-serif; overflow:hidden; overscroll-behavior:none;
+  }
+  body{ touch-action: manipulation; user-select:none; -webkit-user-select:none; }
+
+  .screen{ position:fixed; inset:0; display:none; flex-direction:column; height:100%; height:100dvh; }
+  .screen.active{ display:flex; }
+
+  /* ---------- SETUP SCREEN ---------- */
+  #setup{ overflow-y:auto; align-items:center; padding: max(28px, env(safe-area-inset-top)) 20px 40px; }
+  .setup-wrap{ width:100%; max-width:480px; margin:0 auto; }
+
+  .court-mark{ width:100%; max-width:280px; margin: 4px auto 18px; display:block; }
+  .court-mark line, .court-mark rect{ stroke:var(--court-2); }
+
+  .brand{ text-align:center; margin-bottom:6px; }
+  .brand h1{
+    font-family:'Oswald', sans-serif; font-weight:600; font-size:32px; letter-spacing:0.5px;
+    margin:0; color:var(--ink);
+  }
+  .brand p{ margin:6px 0 0; color:var(--ink-dim); font-size:14px; }
+
+  .field-group{ margin-top:26px; }
+  .field-group h2{
+    font-family:'Oswald', sans-serif; font-weight:500; font-size:13px; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--ball); margin:0 0 10px; opacity:0.85;
+  }
+
+  .name-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .name-row.single{ grid-template-columns:1fr; }
+  input[type=text]{
+    width:100%; background:var(--court); border:1px solid var(--court-2); color:var(--ink);
+    font-family:'Manrope', sans-serif; font-size:15px; font-weight:600; padding:13px 14px; border-radius:10px;
+    outline:none;
+  }
+  input[type=text]:focus{ border-color:var(--ball); }
+  input[type=text]::placeholder{ color:var(--ink-faint); font-weight:500; }
+
+  .team-label{ font-size:13px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .team-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .team-dot.a{ background:var(--team-a); }
+  .team-dot.b{ background:var(--team-b); }
+
+  .choice-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .choice{
+    flex:1 1 auto; min-width:0; text-align:center; padding:12px 10px; border-radius:10px;
+    background:var(--court); border:1px solid var(--court-2); color:var(--ink-dim);
+    font-size:13.5px; font-weight:700; cursor:pointer; line-height:1.3;
+  }
+  .choice small{ display:block; font-weight:500; font-size:11px; margin-top:2px; opacity:0.8; }
+  .choice.selected{ background:var(--ball); border-color:var(--ball); color:#132a17; }
+  .choice.disabled{ opacity:0.35; pointer-events:none; }
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between; background:var(--court);
+    border:1px solid var(--court-2); border-radius:10px; padding:13px 14px; margin-top:2px;
+  }
+  .toggle-row .t-label{ font-size:14px; font-weight:600; }
+  .toggle-row .t-sub{ font-size:12px; color:var(--ink-dim); margin-top:2px; font-weight:500; }
+  .switch{ position:relative; width:46px; height:26px; background:var(--court-2); border-radius:20px; flex:none; cursor:pointer; }
+  .switch::after{ content:''; position:absolute; width:20px; height:20px; top:3px; left:3px; background:var(--ink); border-radius:50%; transition:transform .15s ease; }
+  .switch.on{ background:var(--ball); }
+  .switch.on::after{ transform:translateX(20px); background:#132a17; }
+
+  .start-btn{
+    width:100%; margin-top:30px; padding:17px; border:none; border-radius:12px; background:var(--ball);
+    color:#132a17; font-family:'Oswald', sans-serif; font-size:18px; font-weight:600; letter-spacing:0.03em;
+    cursor:pointer;
+  }
+  .start-btn:active{ transform:scale(0.98); }
+
+  .rules-link{ display:block; text-align:center; margin-top:16px; color:var(--ink-dim); font-size:13px; font-weight:600; background:none; border:none; text-decoration:underline; text-underline-offset:3px; cursor:pointer; padding:8px; width:100%; }
+
+  /* ---------- MATCH SCREEN ---------- */
+  #match{ background:var(--bg); }
+
+  .zone{
+    flex:1; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 6px 14px; overflow:hidden;
+  }
+  .zone.b{ background: linear-gradient(180deg, #163e3b, #123331); padding-top: max(10px, env(safe-area-inset-top)); }
+  .zone.a{ background: linear-gradient(0deg, #163e3b, #123331); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .zone.b::after{ content:''; position:absolute; left:0; right:0; bottom:0; height:1px; background:var(--court-2); }
+  .zone.a::after{ content:''; position:absolute; left:0; right:0; top:0; height:1px; background:var(--court-2); }
+  .zone:active{ filter:brightness(1.08); }
+
+  .zone-team{ display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+  .serve-dot{ width:9px; height:9px; border-radius:50%; background:var(--ball); opacity:0; box-shadow:0 0 8px var(--ball); }
+  .serve-dot.show{ opacity:1; }
+  .zone-name{ font-family:'Oswald', sans-serif; font-size:15px; font-weight:500; letter-spacing:0.03em; color:var(--ink-dim); text-transform:uppercase; }
+  .zone.b .zone-name{ color:var(--team-b); }
+  .zone.a .zone-name{ color:var(--team-a); }
+
+  .zone-players{ font-size:11.5px; color:var(--ink-faint); margin-bottom:6px; font-weight:600; }
+
+  .point-tag{
+    font-family:'Oswald', sans-serif; font-size:11.5px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;
+    color:#132a17; background:var(--ball); padding:3px 10px; border-radius:20px; margin-bottom:6px; opacity:0; transform:translateY(4px);
+    transition:opacity .12s ease, transform .12s ease;
+  }
+  .point-tag.show{ opacity:1; transform:translateY(0); }
+
+  .zone-score{ font-family:'Oswald', sans-serif; font-weight:700; font-size:min(24vw, 128px); line-height:0.9; color:var(--ink); letter-spacing:-0.01em; }
+  .zone.b .zone-score{ color: color-mix(in srgb, var(--team-b) 30%, var(--ink)); }
+  .zone.a .zone-score{ color: color-mix(in srgb, var(--team-a) 30%, var(--ink)); }
+
+  .zone-games{ font-size:14px; font-weight:700; color:var(--ink-dim); margin-top:4px; letter-spacing:0.04em; }
+
+  .center-bar{
+    flex:none; background:var(--bg); display:flex; align-items:center; justify-content:space-between;
+    padding:8px 14px; gap:10px; border-top:1px solid var(--court-2); border-bottom:1px solid var(--court-2);
+  }
+  .ctrl-btn{
+    background:none; border:1px solid var(--court-2); color:var(--ink-dim); font-family:'Manrope',sans-serif;
+    font-size:12px; font-weight:700; padding:8px 12px; border-radius:8px; cursor:pointer; flex:none;
+  }
+  .ctrl-btn:active{ background:var(--court); }
+
+  .setline{ display:flex; gap:2px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+  .setbox{ text-align:center; padding:2px 7px; min-width:22px; }
+  .setbox .n{ font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; color:var(--ink); }
+  .setbox .sub{ font-size:8px; color:var(--ink-faint); position:relative; top:-3px; }
+  .setbox.current .n{ color:var(--ball); }
+
+  /* ---------- OVERLAY (game/set/match banners) ---------- */
+  .flash{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    background:rgba(10,21,20,0.86); z-index:20; opacity:0; pointer-events:none; transition:opacity .18s ease;
+    text-align:center; padding:24px;
+  }
+  .flash.show{ opacity:1; pointer-events:auto; }
+  .flash .kicker{ font-size:13px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ball); font-weight:700; margin-bottom:10px; }
+  .flash h2{ font-family:'Oswald',sans-serif; font-size:clamp(28px,8vw,46px); margin:0 0 18px; font-weight:600; }
+  .flash button{
+    margin-top:6px; background:var(--ball); color:#132a17; border:none; padding:14px 30px; border-radius:10px;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:16px; cursor:pointer;
+  }
+
+  /* ---------- MODAL (rules) ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(6,12,11,0.7); z-index:30; display:none; align-items:flex-end; justify-content:center;
+  }
+  .modal-backdrop.show{ display:flex; }
+  .modal{
+    background:var(--court); width:100%; max-width:560px; max-height:82vh; overflow-y:auto; border-radius:18px 18px 0 0;
+    padding:22px 22px max(22px, env(safe-area-inset-bottom));
+  }
+  .modal h3{ font-family:'Oswald',sans-serif; font-size:20px; margin:0 0 4px; font-weight:600; }
+  .modal .modal-close{ float:right; background:none; border:none; color:var(--ink-dim); font-size:22px; cursor:pointer; line-height:1; }
+  .modal section{ margin-top:18px; }
+  .modal section h4{ font-size:12.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ball); margin:0 0 8px; font-weight:700; }
+  .modal p, .modal li{ font-size:14px; line-height:1.55; color:var(--ink-dim); margin:0 0 6px; }
+  .modal ul{ margin:0; padding-left:18px; }
+
+  /* ---------- VOICE ---------- */
+  .ctrl-btn.mic{ display:flex; align-items:center; gap:6px; position:relative; }
+  .ctrl-btn.mic svg{ width:14px; height:14px; fill:currentColor; }
+  .ctrl-btn.mic.on{ color:#132a17; background:var(--ball); border-color:var(--ball); }
+  .ctrl-btn.mic.on::before{
+    content:''; position:absolute; inset:-4px; border-radius:11px; border:2px solid var(--ball); opacity:0;
+    animation: micpulse 1.6s ease-out infinite;
+  }
+  @keyframes micpulse{ 0%{ transform:scale(0.92); opacity:0.7; } 100%{ transform:scale(1.15); opacity:0; } }
+  .ctrl-btn.mic.err{ color:var(--danger); border-color:var(--danger); }
+
+  .voice-strip{
+    position:fixed; left:50%; transform:translateX(-50%); top: max(10px, env(safe-area-inset-top)); z-index:15;
+    display:none; align-items:center; gap:8px; max-width:calc(100% - 28px);
+    background:rgba(10,21,20,0.82); border:1px solid var(--court-2); border-radius:20px; padding:6px 12px 6px 10px;
+    font-size:12px; font-weight:600; color:var(--ink-dim); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .voice-strip.show{ display:flex; }
+  .voice-strip .dot{ width:8px; height:8px; border-radius:50%; background:var(--ball); box-shadow:0 0 8px var(--ball); flex:none; }
+  .voice-strip.idle .dot{ background:var(--ink-faint); box-shadow:none; }
+  .voice-strip.err .dot{ background:var(--danger); box-shadow:none; }
+  .voice-strip .heard{ color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .zone.hit{ animation: zonehit .45s ease-out; }
+  @keyframes zonehit{ 0%{ filter:brightness(1.35); } 100%{ filter:brightness(1); } }
+
+  .menu-toggle{ margin-top:8px; }
+  .cmd-list{ margin:8px 0 0; padding:0; list-style:none; }
+  .cmd-list li{ display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--court-2); font-size:13.5px; }
+  .cmd-list li:last-child{ border-bottom:none; }
+  .cmd-list .say{ font-weight:700; color:var(--ink); }
+  .cmd-list .does{ color:var(--ink-dim); text-align:right; }
+  .install-hint{ background:var(--bg); border:1px solid var(--court-2); border-radius:10px; padding:12px 14px; margin-top:8px; }
+  .install-hint p{ margin:0; }
+  .install-hint b{ color:var(--ink); }
+
+  @media (prefers-reduced-motion: reduce){
+    .ctrl-btn.mic.on::before, .zone.hit{ animation:none; }
+  }
+
+  @media (min-width: 720px){
+    .zone-score{ font-size:160px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= SETUP SCREEN ================= -->
+<div id="setup" class="screen active">
+  <div class="setup-wrap">
+    <svg class="court-mark" viewBox="0 0 280 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="8" width="264" height="154" rx="4" stroke-width="2"/>
+      <line x1="8" y1="85" x2="272" y2="85" stroke-width="2"/>
+      <line x1="140" y1="8" x2="140" y2="162" stroke-width="1.4" stroke-dasharray="4 4"/>
+      <line x1="8" y1="47" x2="272" y2="47" stroke-width="1.4"/>
+      <line x1="8" y1="123" x2="272" y2="123" stroke-width="1.4"/>
+    </svg>
+
+    <div class="brand">
+      <h1>Padel Score</h1>
+      <p>Regeln festlegen, Match starten, Punkte tippen oder ansagen.</p>
+    </div>
+
+    <div class="field-group">
+      <h2>Modus</h2>
+      <div class="choice-row" id="modeChoices">
+        <div class="choice selected" data-val="doubles">Doppel</div>
+        <div class="choice" data-val="singles">Einzel</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <h2>Team 1</h2>
+      <div class="team-label"><span class="team-dot a"></span>Spieler:innen</div>
+      <div class="name-row" id="teamARow">
+        <input type="text" id="teamA1" placeholder="Name" maxlength="14">
+        <input type="text" id="teamA2" placeholder="Name" maxlength="14">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <h2>Team 2</h2>
+      <div class="team-label"><span class="team-dot b"></span>Spieler:innen</div>
+      <div class="name-row" id="teamBRow">
+        <input type="text" id="teamB1" placeholder="Name" maxlength="14">
+        <input type="text" id="teamB2" placeholder="Name" maxlength="14">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <h2>Aufschlag zu Beginn</h2>
+      <div class="choice-row" id="serverChoices">
+        <div class="choice selected" data-val="A">Team 1</div>
+        <div class="choice" data-val="B">Team 2</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <h2>Einstand-Regel (40:40)</h2>
+      <div class="choice-row" id="deuceChoices">
+        <div class="choice selected" data-val="ad">Vorteil
+          <small>klassisch, 2 Punkte Vorsprung nötig</small>
+        </div>
+        <div class="choice" data-val="golden">Goldener Punkt
+          <small>nächster Punkt entscheidet</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <h2>Sätze</h2>
+      <div class="choice-row" id="setsChoices">
+        <div class="choice" data-val="1">1 Satz</div>
+        <div class="choice selected" data-val="3">Best of 3</div>
+        <div class="choice" data-val="5">Best of 5</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <h2>Satz-Regeln</h2>
+      <div class="toggle-row" id="tiebreakToggleRow">
+        <div>
+          <div class="t-label">Tiebreak bei 6:6</div>
+          <div class="t-sub">sonst weiter bis 2 Spiele Vorsprung</div>
+        </div>
+        <div class="switch on" id="tiebreakToggle"></div>
+      </div>
+      <div class="toggle-row" id="matchTbToggleRow" style="margin-top:8px;">
+        <div>
+          <div class="t-label">Champions-Tiebreak als Entscheidungssatz</div>
+          <div class="t-sub">letzter Satz wird durch Tiebreak bis 10 ersetzt</div>
+        </div>
+        <div class="switch on" id="matchTbToggle"></div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="startBtn">Match starten</button>
+    <button class="rules-link" id="openRulesSetup">Padel-Regeln anzeigen</button>
+  </div>
+</div>
+
+<!-- ================= MATCH SCREEN ================= -->
+<div id="match" class="screen">
+  <div class="zone b" id="zoneB">
+    <div class="zone-team">
+      <span class="serve-dot" id="serveDotB"></span>
+      <span class="zone-name" id="nameB">TEAM 2</span>
+    </div>
+    <div class="zone-players" id="playersB"></div>
+    <div class="point-tag" id="tagB">Spielball</div>
+    <div class="zone-score" id="scoreB">0</div>
+    <div class="zone-games" id="gamesB">Spiele: 0</div>
+  </div>
+
+  <div class="center-bar">
+    <button class="ctrl-btn" id="undoBtn">↺ Zurück</button>
+    <div class="setline" id="setline"></div>
+    <button class="ctrl-btn mic" id="micBtn" aria-label="Sprachsteuerung" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v5a4 4 0 0 0 4 4zm6-4h-2a4 4 0 0 1-8 0H6a6 6 0 0 0 5 5.91V20H8v2h8v-2h-3v-3.09A6 6 0 0 0 18 11z"/></svg>
+      <span id="micLabel">Stimme</span>
+    </button>
+    <button class="ctrl-btn" id="menuBtn">⋯</button>
+  </div>
+  <div class="voice-strip idle" id="voiceStrip" aria-live="polite">
+    <span class="dot"></span>
+    <span id="voiceStatus">Hört zu</span>
+    <span class="heard" id="voiceHeard"></span>
+  </div>
+
+  <div class="zone a" id="zoneA">
+    <div class="zone-score" id="scoreA">0</div>
+    <div class="zone-games" id="gamesA">Spiele: 0</div>
+    <div class="point-tag" id="tagA">Spielball</div>
+    <div class="zone-players" id="playersA"></div>
+    <div class="zone-team">
+      <span class="serve-dot" id="serveDotA"></span>
+      <span class="zone-name" id="nameA">TEAM 1</span>
+    </div>
+  </div>
+</div>
+
+<!-- Flash overlay for game/set/match end -->
+<div class="flash" id="flash">
+  <div class="kicker" id="flashKicker">SPIEL</div>
+  <h2 id="flashTitle">Team 1 gewinnt das Spiel</h2>
+  <button id="flashBtn">Weiter</button>
+</div>
+
+<!-- Menu modal -->
+<div class="modal-backdrop" id="menuModal">
+  <div class="modal">
+    <button class="modal-close" data-close="menuModal">×</button>
+    <h3>Menü</h3>
+    <section>
+      <h4>Sprachsteuerung</h4>
+      <p id="voiceUnsupported" style="display:none; color:var(--danger);">Dieser Browser unterstützt keine Spracherkennung. Auf iPhone/iPad bitte Safari verwenden und in den Einstellungen Siri &amp; Diktat aktivieren.</p>
+      <div class="toggle-row menu-toggle">
+        <div>
+          <div class="t-label">Nur mit Schlüsselwort „Punkt“</div>
+          <div class="t-sub">Empfohlen. Verhindert Fehlzählungen durch Gespräche am Platz.</div>
+        </div>
+        <div class="switch on" id="strictToggle"></div>
+      </div>
+      <div class="toggle-row menu-toggle">
+        <div>
+          <div class="t-label">Spielstand ansagen</div>
+          <div class="t-sub">Nach jedem Punkt wird der Stand vorgelesen.</div>
+        </div>
+        <div class="switch on" id="speakToggle"></div>
+      </div>
+      <ul class="cmd-list" id="cmdList">
+        <li><span class="say">„Punkt Anna“</span><span class="does">Punkt für Annas Team</span></li>
+        <li><span class="say">„Punkt Team eins“ / „Punkt unten“</span><span class="does">Punkt für Team 1</span></li>
+        <li><span class="say">„Punkt Team zwei“ / „Punkt oben“</span><span class="does">Punkt für Team 2</span></li>
+        <li><span class="say">„Punkt zurück“</span><span class="does">letzten Punkt zurücknehmen</span></li>
+        <li><span class="say">„Wie steht es“</span><span class="does">Stand ansagen</span></li>
+        <li><span class="say">„Aufschlag wechseln“</span><span class="does">Aufschlag korrigieren</span></li>
+      </ul>
+    </section>
+    <section id="installSection" style="display:none;">
+      <h4>Als App installieren</h4>
+      <div class="install-hint">
+        <p>In Safari unten auf <b>Teilen</b> tippen, dann <b>„Zum Home-Bildschirm“</b>. Danach startet Padel Score im Vollbild wie eine normale App.</p>
+      </div>
+    </section>
+    <section>
+      <h4>Aufschlag</h4>
+      <p>Tippe auf den Punkt neben dem Teamnamen im Spielfeld, um den Aufschlag manuell zu korrigieren.</p>
+    </section>
+    <section>
+      <h4>Match</h4>
+      <ul>
+        <li><button class="ctrl-btn" id="openRulesMatch" style="width:100%; margin-bottom:8px; padding:12px;">Padel-Regeln anzeigen</button></li>
+        <li><button class="ctrl-btn" id="newMatchBtn" style="width:100%; padding:12px; color:var(--danger); border-color:var(--danger);">Neues Match / Setup</button></li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<!-- Rules modal -->
+<div class="modal-backdrop" id="rulesModal">
+  <div class="modal">
+    <button class="modal-close" data-close="rulesModal">×</button>
+    <h3>Padel-Regeln</h3>
+    <section>
+      <h4>Zählweise pro Spiel</h4>
+      <p>Punkte werden wie im Tennis gezählt: 0, 15, 30, 40, Spiel. Bei Einstand (40:40) greift die gewählte Regel — entweder klassischer Vorteil (2 Punkte Vorsprung nötig) oder Goldener Punkt (der nächste Punkt entscheidet direkt über das Spiel).</p>
+    </section>
+    <section>
+      <h4>Satzgewinn</h4>
+      <p>Ein Satz geht an das Team, das zuerst 6 Spiele mit mindestens 2 Spielen Vorsprung gewinnt. Steht es 6:6, entscheidet je nach Einstellung entweder ein Tiebreak (zuerst 7 Punkte, 2 Punkte Vorsprung) oder es wird ohne Punktelimit weitergespielt, bis ein Team 2 Spiele in Führung liegt.</p>
+    </section>
+    <section>
+      <h4>Match & Champions-Tiebreak</h4>
+      <p>Das Match wird über 1, 3 oder 5 Sätze gespielt. Bei Gleichstand vor dem letzten möglichen Satz kann dieser durch einen Champions-Tiebreak (bis 10 Punkte, 2 Punkte Vorsprung) ersetzt werden, statt einen vollen Satz zu spielen.</p>
+    </section>
+    <section>
+      <h4>Aufschlag</h4>
+      <p>Der Aufschlag wechselt nach jedem Spiel zum anderen Team. In einem Tiebreak schlägt zunächst ein Spieler einen Punkt auf, danach wechselt der Aufschlag alle 2 Punkte zwischen den Teams. Der Aufschlag erfolgt von unterhalb der Schulter, seitlich hinter der Grundlinie, und muss diagonal in das gegnerische Aufschlagfeld springen — der Ball darf dabei einmal auf dem Boden aufkommen, bevor er geschlagen wird.</p>
+    </section>
+    <section>
+      <h4>Ball im Spiel & Gitterwände</h4>
+      <p>Nach der Rückgabe darf der Ball die Gitterwände der eigenen Spielfeldhälfte nutzen, solange er zuvor im gegnerischen Feld den Boden berührt hat. Berührt der Ball die Wand, bevor er den Boden berührt hat, gilt der Punkt als verloren, sobald er nicht regelkonform zurückgespielt wird.</p>
+    </section>
+    <section>
+      <h4>Let (Wiederholung des Aufschlags)</h4>
+      <p>Berührt der Aufschlag das Netz und landet dennoch korrekt im gegnerischen Aufschlagfeld, wird der Aufschlag wiederholt, ohne dass ein Punkt vergeben wird.</p>
+    </section>
+    <section>
+      <h4>Punktverlust</h4>
+      <ul>
+        <li>Der Ball berührt den Boden zweimal, bevor er zurückgespielt wird.</li>
+        <li>Der Ball verlässt das Spielfeld über die Gitterwand, ohne zuvor im gegnerischen Feld aufgekommen zu sein, oder fliegt aus dem Feld hinaus (z. B. über das umlaufende Gitter ins Freie).</li>
+        <li>Der Ball wird mit dem Schläger geworfen oder außerhalb der Regeln berührt (z. B. Körperkontakt).</li>
+        <li>Ein Spieler betritt bei der Rückgabe das gegnerische Feld oder berührt das Netz.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------------- STATE ----------------
+  let cfg = null;
+  let state = null;
+  let history = [];
+
+  const $ = id => document.getElementById(id);
+
+  // ---------------- SETUP SCREEN INTERACTIONS ----------------
+  function wireChoiceGroup(groupId, onPick){
+    const group = $(groupId);
+    group.querySelectorAll('.choice').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        if(el.classList.contains('disabled')) return;
+        group.querySelectorAll('.choice').forEach(c=>c.classList.remove('selected'));
+        el.classList.add('selected');
+        onPick(el.dataset.val);
+      });
+    });
+  }
+  wireChoiceGroup('modeChoices', val=>{
+    $('teamARow').classList.toggle('single', val==='singles');
+    $('teamBRow').classList.toggle('single', val==='singles');
+    $('teamA2').style.display = val==='singles' ? 'none' : 'block';
+    $('teamB2').style.display = val==='singles' ? 'none' : 'block';
+  });
+  wireChoiceGroup('serverChoices', ()=>{});
+  wireChoiceGroup('deuceChoices', ()=>{});
+  wireChoiceGroup('setsChoices', val=>{
+    const row = $('matchTbToggleRow');
+    if(val==='1'){ row.style.opacity='0.35'; row.style.pointerEvents='none'; }
+    else{ row.style.opacity='1'; row.style.pointerEvents='auto'; }
+  });
+
+  function wireSwitch(id){
+    const el = $(id);
+    el.addEventListener('click', ()=> el.classList.toggle('on'));
+  }
+  wireSwitch('tiebreakToggle');
+  wireSwitch('matchTbToggle');
+
+  function getSelected(groupId){
+    return document.querySelector('#'+groupId+' .choice.selected').dataset.val;
+  }
+
+  $('startBtn').addEventListener('click', startMatch);
+
+  function startMatch(){
+    const mode = getSelected('modeChoices');
+    cfg = {
+      mode: mode,
+      teamAName: (($('teamA1').value||'Team 1').trim()),
+      teamBName: (($('teamB1').value||'Team 2').trim()),
+      teamAPlayers: mode==='doubles' ? [ $('teamA1').value.trim(), $('teamA2').value.trim() ].filter(Boolean) : [],
+      teamBPlayers: mode==='doubles' ? [ $('teamB1').value.trim(), $('teamB2').value.trim() ].filter(Boolean) : [],
+      deuceRule: getSelected('deuceChoices'),           // 'ad' | 'golden'
+      totalSets: parseInt(getSelected('setsChoices'),10),
+      tiebreakAt66: $('tiebreakToggle').classList.contains('on'),
+      matchTbDecider: $('matchTbToggle').classList.contains('on'),
+      firstServer: getSelected('serverChoices')
+    };
+    cfg.setsToWin = Math.ceil(cfg.totalSets/2);
+
+    // Doubles display names fall back to player names combined if provided
+    if(mode==='doubles'){
+      if(cfg.teamAPlayers.length) cfg.teamADisplay = cfg.teamAPlayers.join(' / ');
+      else cfg.teamADisplay = cfg.teamAName;
+      if(cfg.teamBPlayers.length) cfg.teamBDisplay = cfg.teamBPlayers.join(' / ');
+      else cfg.teamBDisplay = cfg.teamBName;
+    } else {
+      cfg.teamADisplay = cfg.teamAName;
+      cfg.teamBDisplay = cfg.teamBName;
+    }
+
+    state = freshState();
+    history = [];
+    $('nameA').textContent = cfg.teamADisplay.toUpperCase();
+    $('nameB').textContent = cfg.teamBDisplay.toUpperCase();
+    $('playersA').textContent = cfg.mode==='doubles' && cfg.teamAPlayers.length>1 ? cfg.teamAPlayers.join(' & ') : '';
+    $('playersB').textContent = cfg.mode==='doubles' && cfg.teamBPlayers.length>1 ? cfg.teamBPlayers.join(' & ') : '';
+
+    show('match');
+    render();
+    keepAwake();
+  }
+
+  function applyCfgToUI(){
+    $('nameA').textContent = cfg.teamADisplay.toUpperCase();
+    $('nameB').textContent = cfg.teamBDisplay.toUpperCase();
+    $('playersA').textContent = cfg.mode==='doubles' && cfg.teamAPlayers.length>1 ? cfg.teamAPlayers.join(' & ') : '';
+    $('playersB').textContent = cfg.mode==='doubles' && cfg.teamBPlayers.length>1 ? cfg.teamBPlayers.join(' & ') : '';
+  }
+
+  // ---------------- PERSISTENCE ----------------
+  const STORE_KEY = 'padelscore.match.v1';
+  function persist(){
+    try{
+      if(!cfg || !state){ localStorage.removeItem(STORE_KEY); return; }
+      localStorage.setItem(STORE_KEY, JSON.stringify({ cfg, state, history: history.slice(-30) }));
+    }catch(e){}
+  }
+  function restore(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return false;
+      const saved = JSON.parse(raw);
+      if(!saved || !saved.cfg || !saved.state || saved.state.matchWinner) return false;
+      cfg = saved.cfg; state = saved.state; history = saved.history || [];
+      applyCfgToUI();
+      show('match');
+      render();
+      return true;
+    }catch(e){ return false; }
+  }
+
+  // ---------------- WAKE LOCK (Display an lassen) ----------------
+  let wakeLock = null;
+  async function keepAwake(){
+    if(!('wakeLock' in navigator)) return;
+    try{
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', ()=>{ wakeLock=null; });
+    }catch(e){}
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible'){
+      if($('match').classList.contains('active')) keepAwake();
+      if(voice.enabled) startRecognition();
+    }
+  });
+
+  function freshState(){
+    return {
+      sets: [ newSetObj() ],
+      setsWonA: 0,
+      setsWonB: 0,
+      server: cfg.firstServer,
+      matchWinner: null
+    };
+  }
+
+  function newSetObj(){
+    return {
+      gamesA: 0, gamesB: 0,
+      isTiebreak: false,
+      isSuperTiebreak: false,
+      tbA: 0, tbB: 0,
+      tbPointsPlayed: 0,
+      tbFirstServer: null,
+      pointsA: 0, pointsB: 0,
+      finished: false,
+      winner: null,
+      finalLabel: null // e.g. "7-6(5)" for display in set history
+    };
+  }
+
+  function isDeciderUpcoming(){
+    // Would the NEXT set (if any) be the final possible set with scores tied one-away?
+    return cfg.totalSets>1 && cfg.matchTbDecider &&
+      state.setsWonA === cfg.setsToWin-1 && state.setsWonB === cfg.setsToWin-1;
+  }
+
+  // ---------------- SCORING LOGIC ----------------
+  function checkGameWon(p, o){
+    if(cfg.deuceRule==='golden'){
+      return p>=4 && p>o;
+    }
+    return p>=4 && (p-o)>=2;
+  }
+  function checkTbWon(p, o, target){
+    return p>=target && (p-o)>=2;
+  }
+  function pointLabel(own, opp){
+    const seq=['0','15','30','40'];
+    if(own<3 || opp<3) return seq[Math.min(own,3)];
+    if(own===opp) return '40';
+    if(own>opp) return 'Ad';
+    return '40';
+  }
+
+  function snapshot(){
+    history.push(JSON.parse(JSON.stringify(state)));
+    if(history.length>200) history.shift();
+  }
+
+  function addPoint(team){
+    if(state.matchWinner) return;
+    snapshot();
+    const set = state.sets[state.sets.length-1];
+
+    if(set.isTiebreak){
+      const target = set.isSuperTiebreak ? 10 : 7;
+      if(team==='A') set.tbA++; else set.tbB++;
+      set.tbPointsPlayed++;
+      // server rotation within tiebreak: first point by tbFirstServer, then alternate every 2
+      if(set.tbPointsPlayed===1){ state.server = set.tbFirstServer==='A'?'B':'A'; }
+      else if((set.tbPointsPlayed-1)%2===0){ state.server = state.server==='A'?'B':'A'; }
+
+      if(checkTbWon(set.tbA, set.tbB, target) || checkTbWon(set.tbB, set.tbA, target)){
+        const winner = set.tbA>set.tbB ? 'A':'B';
+        finishSet(set, winner, true);
+      } else {
+        render();
+      }
+      return;
+    }
+
+    if(team==='A') set.pointsA++; else set.pointsB++;
+
+    if(checkGameWon(set.pointsA, set.pointsB) || checkGameWon(set.pointsB, set.pointsA)){
+      const gameWinner = set.pointsA>set.pointsB ? 'A':'B';
+      if(gameWinner==='A') set.gamesA++; else set.gamesB++;
+      set.pointsA=0; set.pointsB=0;
+      state.server = state.server==='A' ? 'B' : 'A';
+
+      const gA=set.gamesA, gB=set.gamesB;
+      if((gA>=6 && (gA-gB)>=2) || (gB>=6 && (gB-gA)>=2)){
+        finishSet(set, gA>gB?'A':'B', false);
+      } else if(gA===6 && gB===6 && cfg.tiebreakAt66){
+        set.isTiebreak = true;
+        set.tbFirstServer = state.server; // server about to serve first tb point
+        render();
+      } else {
+        render(true);
+      }
+    } else {
+      render();
+    }
+  }
+
+  function finishSet(set, winner, wasTiebreak){
+    set.finished = true;
+    set.winner = winner;
+    if(wasTiebreak && set.isSuperTiebreak){
+      set.finalLabel = (winner==='A'? set.tbA+'-'+set.tbB : set.tbB+'-'+set.tbA);
+    } else if(wasTiebreak){
+      if(winner==='A') set.gamesA=7; else set.gamesB=7;
+      const loserTb = winner==='A'? set.tbB : set.tbA;
+      set.finalLabel = (winner==='A'?'7-6':'6-7') + '('+loserTb+')';
+    } else {
+      set.finalLabel = set.gamesA+'-'+set.gamesB;
+    }
+    if(winner==='A') state.setsWonA++; else state.setsWonB++;
+
+    if(state.setsWonA>=cfg.setsToWin || state.setsWonB>=cfg.setsToWin){
+      state.matchWinner = state.setsWonA>state.setsWonB ? 'A':'B';
+      render();
+      showFlash('match', winner);
+      return;
+    }
+
+    const ns = newSetObj();
+    if(isDeciderUpcoming()){
+      ns.isTiebreak = true;
+      ns.isSuperTiebreak = true;
+      ns.tbFirstServer = state.server;
+    }
+    state.sets.push(ns);
+    render();
+    showFlash(wasTiebreak && set.isSuperTiebreak ? 'match' : 'set', winner);
+  }
+
+  function undo(){
+    if(!history.length) return;
+    state = history.pop();
+    hideFlash();
+    render();
+  }
+
+  function manualServerSwitch(){
+    if(state.matchWinner) return;
+    state.server = state.server==='A' ? 'B' : 'A';
+    render();
+  }
+
+  // ---------------- RENDER ----------------
+  function fmtGames(set, side){
+    if(set.isTiebreak){
+      const mine = side==='A'?set.tbA:set.tbB;
+      return (set.isSuperTiebreak? 'Match-TB: ' : 'Tiebreak: ') + mine;
+    }
+    return 'Spiele: ' + (side==='A'?set.gamesA:set.gamesB);
+  }
+
+  function render(justWonGame){
+    const set = state.sets[state.sets.length-1];
+
+    // points / tiebreak numbers
+    let dispA, dispB;
+    if(set.isTiebreak){
+      dispA = String(set.tbA); dispB = String(set.tbB);
+    } else {
+      dispA = pointLabel(set.pointsA, set.pointsB);
+      dispB = pointLabel(set.pointsB, set.pointsA);
+      if(set.pointsA===set.pointsB && set.pointsA>=3 && cfg.deuceRule==='golden'){ dispA='40'; dispB='40'; }
+    }
+    $('scoreA').textContent = dispA;
+    $('scoreB').textContent = dispB;
+    $('gamesA').textContent = fmtGames(set,'A');
+    $('gamesB').textContent = fmtGames(set,'B');
+
+    // server dot
+    $('serveDotA').classList.toggle('show', state.server==='A');
+    $('serveDotB').classList.toggle('show', state.server==='B');
+
+    // point tags: Spielball / Satzball / Matchball
+    setTag('A', set); setTag('B', set);
+
+    // set history line
+    renderSetline();
+    persist();
+  }
+
+  function setTag(side, set){
+    const el = $('tag'+side);
+    if(state.matchWinner){ el.classList.remove('show'); return; }
+    const other = side==='A'?'B':'A';
+    let wouldWinGame;
+    if(set.isTiebreak){
+      const p = side==='A'?set.tbA:set.tbB, o = side==='A'?set.tbB:set.tbA;
+      const target = set.isSuperTiebreak?10:7;
+      wouldWinGame = checkTbWon(p+1,o,target);
+    } else {
+      const p = side==='A'?set.pointsA:set.pointsB, o = side==='A'?set.pointsB:set.pointsA;
+      wouldWinGame = checkGameWon(p+1,o);
+    }
+    if(!wouldWinGame){ el.classList.remove('show'); return; }
+
+    // would this game also win the set?
+    let gA = set.gamesA + (side==='A' && !set.isTiebreak ? 1:0);
+    let gB = set.gamesB + (side==='B' && !set.isTiebreak ? 1:0);
+    let wouldWinSet;
+    if(set.isTiebreak){ wouldWinSet = true; }
+    else { wouldWinSet = (gA>=6 && (gA-gB)>=2) || (gB>=6 && (gB-gA)>=2); }
+
+    if(!wouldWinSet){ el.textContent='Spielball'; el.classList.add('show'); return; }
+
+    const setsA = state.setsWonA + (side==='A' && wouldWinSet ? 1:0);
+    const setsB = state.setsWonB + (side==='B' && wouldWinSet ? 1:0);
+    const wouldWinMatch = setsA>=cfg.setsToWin || setsB>=cfg.setsToWin;
+    el.textContent = wouldWinMatch ? 'Matchball' : 'Satzball';
+    el.classList.add('show');
+  }
+
+  function renderSetline(){
+    const wrap = $('setline');
+    wrap.innerHTML = '';
+    state.sets.forEach((s, i)=>{
+      const box = document.createElement('div');
+      box.className = 'setbox' + (i===state.sets.length-1 && !state.matchWinner ? ' current':'');
+      const n = document.createElement('div'); n.className='n';
+      n.textContent = s.finished ? s.finalLabel.split('(')[0] : (s.isTiebreak? (s.tbA+'-'+s.tbB) : (s.gamesA+'-'+s.gamesB));
+      const sub = document.createElement('div'); sub.className='sub';
+      sub.textContent = 'S'+(i+1);
+      box.appendChild(n); box.appendChild(sub);
+      wrap.appendChild(box);
+    });
+  }
+
+  // ---------------- FLASH OVERLAY ----------------
+  function showFlash(kind, winnerSide){
+    const name = winnerSide==='A' ? cfg.teamADisplay : cfg.teamBDisplay;
+    $('flashKicker').textContent = kind==='match' ? 'MATCH BEENDET' : 'SATZ BEENDET';
+    $('flashTitle').textContent = name + (kind==='match' ? ' gewinnt das Match!' : ' gewinnt den Satz');
+    $('flash').classList.add('show');
+  }
+  function hideFlash(){ $('flash').classList.remove('show'); }
+  $('flashBtn').addEventListener('click', hideFlash);
+
+  // ---------------- TAP ZONES ----------------
+  $('zoneA').addEventListener('click', e=>{
+    if(e.target.closest('.zone-team')){ manualServerSwitch(); return; }
+    addPoint('A');
+  });
+  $('zoneB').addEventListener('click', e=>{
+    if(e.target.closest('.zone-team')){ manualServerSwitch(); return; }
+    addPoint('B');
+  });
+
+  $('undoBtn').addEventListener('click', undo);
+
+  // ---------------- MODALS / MENU ----------------
+  function openModal(id){ $(id).classList.add('show'); }
+  function closeModal(id){ $(id).classList.remove('show'); }
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click', ()=> closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(bd=>{
+    bd.addEventListener('click', e=>{ if(e.target===bd) bd.classList.remove('show'); });
+  });
+  $('menuBtn').addEventListener('click', ()=> openModal('menuModal'));
+  $('openRulesSetup').addEventListener('click', ()=> openModal('rulesModal'));
+  $('openRulesMatch').addEventListener('click', ()=>{ closeModal('menuModal'); openModal('rulesModal'); });
+  $('newMatchBtn').addEventListener('click', ()=>{
+    closeModal('menuModal');
+    hideFlash();
+    cfg = null; state = null; history = [];
+    persist();
+    show('setup');
+  });
+
+  function show(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    $(id).classList.add('active');
+  }
+
+  // ================= SPRACHSTEUERUNG =================
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voice = {
+    enabled: false,
+    strict: true,          // Befehl muss "Punkt" enthalten
+    speak: true,           // Stand ansagen
+    rec: null,
+    starting: false,
+    stopRequested: false,
+    muteUntil: 0,          // eigene Ansagen nicht als Befehl werten
+    lastCmdAt: 0,
+    restartTimer: null
+  };
+  try{
+    const vs = JSON.parse(localStorage.getItem('padelscore.voice.v1')||'{}');
+    if(typeof vs.strict==='boolean') voice.strict = vs.strict;
+    if(typeof vs.speak==='boolean') voice.speak = vs.speak;
+  }catch(e){}
+  function persistVoiceSettings(){
+    try{ localStorage.setItem('padelscore.voice.v1', JSON.stringify({ strict:voice.strict, speak:voice.speak })); }catch(e){}
+  }
+  $('strictToggle').classList.toggle('on', voice.strict);
+  $('speakToggle').classList.toggle('on', voice.speak);
+  $('strictToggle').addEventListener('click', ()=>{ voice.strict = $('strictToggle').classList.contains('on'); persistVoiceSettings(); updateCmdList(); });
+  $('speakToggle').addEventListener('click', ()=>{ voice.speak = $('speakToggle').classList.contains('on'); persistVoiceSettings(); });
+
+  function updateCmdList(){
+    // Ohne Schlüsselwort reicht der Name / die Teamnummer allein
+    const items = $('cmdList').querySelectorAll('.say');
+    if(!items.length) return;
+    items[0].textContent = voice.strict ? '„Punkt Anna“' : '„Anna“ oder „Punkt Anna“';
+    items[1].textContent = voice.strict ? '„Punkt Team eins“ / „Punkt unten“' : '„Team eins“ / „unten“';
+    items[2].textContent = voice.strict ? '„Punkt Team zwei“ / „Punkt oben“' : '„Team zwei“ / „oben“';
+    items[3].textContent = voice.strict ? '„Punkt zurück“' : '„Zurück“';
+  }
+  updateCmdList();
+
+  if(!SR){
+    $('voiceUnsupported').style.display = 'block';
+    $('micBtn').classList.add('err');
+    $('micLabel').textContent = 'Keine Stimme';
+  }
+
+  // ---- Textnormalisierung & Fuzzy-Matching ----
+  function normalize(t){
+    return (t||'').toLowerCase()
+      .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+      .replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function lev(a,b){
+    if(a===b) return 0;
+    const m=a.length, n=b.length; if(!m) return n; if(!n) return m;
+    let prev = Array.from({length:n+1},(_,i)=>i);
+    for(let i=1;i<=m;i++){
+      const cur=[i];
+      for(let j=1;j<=n;j++){
+        cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1]?0:1));
+      }
+      prev=cur;
+    }
+    return prev[n];
+  }
+  function aliasesFor(side){
+    const base = side==='A'
+      ? ['team eins','team 1','team a','eins','1','unten','erste','erstes']
+      : ['team zwei','team 2','team b','zwei','2','oben','zweite','zweites'];
+    const names = side==='A' ? [cfg.teamAName, ...cfg.teamAPlayers] : [cfg.teamBName, ...cfg.teamBPlayers];
+    names.forEach(n=>{ const k = normalize(n); if(k && k!=='team 1' && k!=='team 2') base.push(k); });
+    return base;
+  }
+  function matchTeam(text){
+    const tokens = text.split(' ');
+    const score = { A:0, B:0 };
+    ['A','B'].forEach(side=>{
+      aliasesFor(side).forEach(alias=>{
+        if(alias.includes(' ')){
+          if((' '+text+' ').includes(' '+alias+' ')) score[side] += 2;
+          return;
+        }
+        tokens.forEach(tok=>{
+          if(tok===alias){ score[side] += 2; return; }
+          // Namen: leichte Verhörer tolerieren
+          if(alias.length>=4 && tok.length>=3 && lev(tok,alias) <= (alias.length>=6?2:1)) score[side] += 1;
+        });
+      });
+    });
+    if(score.A===score.B) return null;
+    return score.A>score.B ? 'A' : 'B';
+  }
+
+  // ---- Ansagen ----
+  function speak(text){
+    if(!('speechSynthesis' in window)) return;
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'de-DE'; u.rate = 1.0;
+      const est = 600 + text.length*70;
+      voice.muteUntil = Date.now() + est;
+      u.onend = ()=>{ voice.muteUntil = Date.now() + 400; };
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  const POINT_WORDS = ['null','fünfzehn','dreißig','vierzig'];
+  function scoreWords(){
+    const set = state.sets[state.sets.length-1];
+    if(state.matchWinner){
+      return (state.matchWinner==='A'?cfg.teamADisplay:cfg.teamBDisplay) + ' gewinnt das Match.';
+    }
+    if(set.isTiebreak){
+      return (set.isSuperTiebreak?'Match-Tiebreak ':'Tiebreak ') + set.tbA + ' zu ' + set.tbB;
+    }
+    const a=set.pointsA, b=set.pointsB;
+    let pts;
+    if(a>=3 && b>=3){
+      if(a===b) pts = cfg.deuceRule==='golden' ? 'Vierzig beide. Goldener Punkt' : 'Einstand';
+      else pts = 'Vorteil ' + (a>b?cfg.teamADisplay:cfg.teamBDisplay);
+    } else if(a===b){
+      pts = POINT_WORDS[a] + ' beide';
+    } else {
+      pts = POINT_WORDS[Math.min(a,3)] + ' ' + POINT_WORDS[Math.min(b,3)];
+    }
+    if(a===0 && b===0){
+      return 'Spiele ' + set.gamesA + ' zu ' + set.gamesB;
+    }
+    return pts;
+  }
+
+  // ---- Befehle ausführen ----
+  function hitZone(side){
+    const z = $('zone'+side);
+    z.classList.remove('hit'); void z.offsetWidth; z.classList.add('hit');
+  }
+  function handleCommand(raw){
+    if(!cfg || !state) return;
+    if(Date.now() < voice.muteUntil) return;              // eigene Ansage ignorieren
+    const t = normalize(raw);
+    if(!t) return;
+    setHeard(raw);
+
+    const hasPunkt = /\bpunkt\b/.test(t);
+    const isUndo = /\b(zurueck|rueckgaengig|undo|korrigieren|streichen)\b/.test(t);
+    const asksScore = /\b(stand|steht|spielstand)\b/.test(t);
+    const serveSwitch = /\baufschlag\b/.test(t) && /\b(wechsel|wechseln|tauschen|aendern|andere|anderen)\b/.test(t);
+
+    if(Date.now() - voice.lastCmdAt < 1200) return;        // doppelte Erkennung abfangen
+
+    if(isUndo && (hasPunkt || !voice.strict)){
+      voice.lastCmdAt = Date.now();
+      undo();
+      if(voice.speak) speak('Zurückgenommen. ' + scoreWords());
+      return;
+    }
+    if(asksScore){
+      voice.lastCmdAt = Date.now();
+      speak(scoreWords());
+      return;
+    }
+    if(serveSwitch){
+      voice.lastCmdAt = Date.now();
+      manualServerSwitch();
+      if(voice.speak) speak('Aufschlag ' + (state.server==='A'?cfg.teamADisplay:cfg.teamBDisplay));
+      return;
+    }
+    if(voice.strict && !hasPunkt) return;
+    const side = matchTeam(t);
+    if(!side) return;
+    if(state.matchWinner) return;
+
+    voice.lastCmdAt = Date.now();
+    const before = state.sets[state.sets.length-1];
+    const gBefore = before.gamesA + before.gamesB, setsBefore = state.sets.length, tbBefore = before.isTiebreak;
+    addPoint(side);
+    hitZone(side);
+
+    if(!voice.speak) return;
+    const now = state.sets[state.sets.length-1];
+    const name = side==='A'?cfg.teamADisplay:cfg.teamBDisplay;
+    if(state.matchWinner){ speak(scoreWords()); return; }
+    if(state.sets.length>setsBefore){ speak('Satz ' + name + '. ' + scoreWords()); return; }
+    if(!tbBefore && now.isTiebreak){ speak('Spiel ' + name + '. Sechs beide. Tiebreak.'); return; }
+    if(!now.isTiebreak && (now.gamesA+now.gamesB)>gBefore){ speak('Spiel ' + name + '. ' + scoreWords()); return; }
+    speak(scoreWords());
+  }
+
+  // ---- Recognition-Lebenszyklus (Safari beendet die Erkennung immer wieder von selbst) ----
+  function setVoiceUI(status, cls){
+    const strip = $('voiceStrip');
+    strip.classList.toggle('show', voice.enabled || cls==='err');
+    strip.classList.remove('idle','err');
+    if(cls) strip.classList.add(cls);
+    $('voiceStatus').textContent = status;
+    $('micBtn').classList.toggle('on', voice.enabled);
+    $('micBtn').setAttribute('aria-pressed', voice.enabled ? 'true':'false');
+    $('micLabel').textContent = voice.enabled ? 'Hört zu' : 'Stimme';
+  }
+  let heardTimer=null;
+  function setHeard(text){
+    $('voiceHeard').textContent = '„' + text.trim() + '“';
+    clearTimeout(heardTimer);
+    heardTimer = setTimeout(()=>{ $('voiceHeard').textContent=''; }, 4000);
+  }
+
+  function buildRecognizer(){
+    const rec = new SR();
+    rec.lang = 'de-DE';
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    rec.onstart = ()=>{ voice.starting=false; setVoiceUI('Hört zu'); };
+    rec.onresult = (ev)=>{
+      for(let i=ev.resultIndex; i<ev.results.length; i++){
+        const r = ev.results[i];
+        if(!r.isFinal) continue;
+        // alle Alternativen prüfen, erste passende gewinnt
+        let handled=false;
+        for(let k=0;k<r.length && !handled;k++){
+          const before = voice.lastCmdAt;
+          handleCommand(r[k].transcript);
+          handled = voice.lastCmdAt!==before;
+        }
+        if(!handled) setHeard(r[0].transcript);
+      }
+    };
+    rec.onerror = (ev)=>{
+      voice.starting=false;
+      if(ev.error==='not-allowed' || ev.error==='service-not-allowed'){
+        voice.enabled=false; voice.stopRequested=true;
+        setVoiceUI('Mikrofon nicht erlaubt – in den Einstellungen freigeben', 'err');
+        $('micBtn').classList.add('err');
+      } else if(ev.error==='network'){
+        setVoiceUI('Keine Verbindung – Spracherkennung braucht Internet', 'err');
+      }
+      // 'no-speech' / 'aborted' → onend kümmert sich um den Neustart
+    };
+    rec.onend = ()=>{
+      voice.starting=false;
+      if(voice.enabled && !voice.stopRequested){
+        setVoiceUI('Neustart…', 'idle');
+        clearTimeout(voice.restartTimer);
+        voice.restartTimer = setTimeout(startRecognition, 350);
+      } else {
+        setVoiceUI('Aus', 'idle');
+        $('voiceStrip').classList.remove('show');
+      }
+    };
+    return rec;
+  }
+  function startRecognition(){
+    if(!SR || !voice.enabled || voice.starting) return;
+    if(document.visibilityState!=='visible') return;
+    try{
+      if(!voice.rec) voice.rec = buildRecognizer();
+      voice.starting = true;
+      voice.stopRequested = false;
+      voice.rec.start();
+    }catch(e){
+      // "already started" o.ä. – kurz warten und erneut versuchen
+      voice.starting=false;
+      clearTimeout(voice.restartTimer);
+      voice.restartTimer = setTimeout(()=>{ voice.rec=null; startRecognition(); }, 800);
+    }
+  }
+  function stopRecognition(){
+    voice.stopRequested = true;
+    clearTimeout(voice.restartTimer);
+    try{ voice.rec && voice.rec.stop(); }catch(e){}
+    setVoiceUI('Aus','idle');
+    $('voiceStrip').classList.remove('show');
+  }
+  $('micBtn').addEventListener('click', ()=>{
+    if(!SR){ openModal('menuModal'); return; }
+    voice.enabled = !voice.enabled;
+    $('micBtn').classList.remove('err');
+    if(voice.enabled){
+      setVoiceUI('Mikrofon wird aktiviert…','idle');
+      // Sprachausgabe auf iOS mit einer Nutzergeste freischalten
+      if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(''); u.volume=0; speechSynthesis.speak(u); }catch(e){} }
+      startRecognition();
+    } else {
+      stopRecognition();
+    }
+  });
+
+  // ================= INIT =================
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  if(!isStandalone && isIOS) $('installSection').style.display='block';
+
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  restore();
+
+})();
+</script>
+</body>
+</html>
